@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from failure_log.api import router as failure_log_router
 import logging
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
