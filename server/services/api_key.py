@@ -3,6 +3,10 @@ import hashlib
 import random
 import string
 import sys
+
+from sqlalchemy.exc import SQLAlchemyError
+
+from exceptions.api_key import ApiKeyDatabaseError, ApiKeyAlreadyExists, ApiKeyNotFound
 from schemas.api_key import APIKeySchema
 from models.api_key import APIKey
 
@@ -42,34 +46,59 @@ class APIKeyService:
 
     async def add_api_key_to_db(self, api_key: str):
         try:
+            try:
+                await self.get_api_key_by_key(api_key)
+                raise ApiKeyAlreadyExists()
+            except ApiKeyNotFound:
+                pass
+
             key = APIKey(key=api_key)
 
             self.db.add(key)
             await self.db.commit()
             await self.db.refresh(key)
             return True
-        except Exception as e:
+
+        except SQLAlchemyError as e:
             await self.db.rollback()
-            raise e
+            raise ApiKeyDatabaseError() from e
 
     async def get_api_key_by_key(self, api_key: str):
-        result = await self.db.execute(select(APIKey).where(APIKey.key == api_key))
-        return result.scalars().first()
+
+        try:
+            result = await self.db.execute(select(APIKey).where(APIKey.key == api_key))
+            api_key = result.scalars().first()
+
+            if not api_key:
+                raise ApiKeyNotFound()
+            return api_key
+
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise ApiKeyDatabaseError() from e
 
     async def get_api_keys(self):
-        result = await self.db.execute(select(APIKey))
-        return [APIKeySchema.model_validate(data).model_dump() for data in result.scalars().all()]
+        try:
+            result = await self.db.execute(select(APIKey))
+            return [APIKeySchema.model_validate(data).model_dump() for data in result.scalars().all()]
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            raise ApiKeyDatabaseError() from e
 
     async def delete_api_key(self, key_id: int):
         try:
             key = await self.db.execute(select(APIKey).where(APIKey.id == key_id))
+            if not key.scalars().first():
+                raise ApiKeyNotFound()
 
             await self.db.delete(key)
             await self.db.commit()
+
             return True
-        except Exception as e:
+
+        except SQLAlchemyError as e:
             await self.db.rollback()
-            raise e
+            raise ApiKeyDatabaseError() from e
 
 async def main():
     async with async_session as session:
@@ -83,28 +112,22 @@ async def main():
         command = sys.argv[1]
 
         if command == "add":
-            try:
-                await service.add_api_key_to_db(key)
-            except Exception as e:
-                logger.error(f"Error adding API key to DB: {str(e)}")
+            await service.add_api_key_to_db(key)
 
         if command == "delete":
             if len(sys.argv) < 3:
                 print("Please provide the key ID to delete.")
                 sys.exit(1)
             key_id = int(sys.argv[2])
-            try:
-                await service.delete_api_key(key_id)
-            except Exception as e:
-                logger.error(f"Error deleting API key from DB: {str(e)}")
+
+            await service.delete_api_key(key_id)
 
         if command == "keys":
-            try:
-                keys = await service.get_api_keys()
-                for key in keys:
-                    print(key)
-            except Exception as e:
-                logger.error(f"Error retrieving keys: {str(e)}")
+
+            keys = await service.get_api_keys()
+            for key in keys:
+                print(key)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

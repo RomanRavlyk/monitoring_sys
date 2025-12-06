@@ -36,7 +36,7 @@ class FailureLogService:
         except SQLAlchemyError as e:
             await self.db.rollback()
             logger.error(f"Error creating failure log: {str(e)}")
-            raise failure_log_exceptions.FailureLogDatabaseError("Error Creating failure log") from e
+            raise failure_log_exceptions.FailureLogDatabaseError() from e
 
     async def get_failure_log_by_id(self, log_id: int) -> FailureLog | None:
         try:
@@ -45,15 +45,13 @@ class FailureLogService:
 
             if not log:
                 logger.info(f"Failure log with id {log_id} not found")
-                raise failure_log_exceptions.FailureLogNotFound(
-                    f"Log with id={log_id} not found"
-                )
+                raise failure_log_exceptions.FailureLogNotFound()
 
             return log
 
         except SQLAlchemyError as e:
             logger.error(f"Error retrieving failure log with id {log_id}: {str(e)}")
-            raise failure_log_exceptions.FailureLogDatabaseError(f"Error retrieving failure log with id {log_id}") from e
+            raise failure_log_exceptions.FailureLogDatabaseError() from e
 
     async def update_failure_log(self, log_id: int, data: dict) -> FailureLog | None:
         try:
@@ -69,7 +67,7 @@ class FailureLogService:
         except SQLAlchemyError as e:
             await self.db.rollback()
             logger.error(f"Error updating failure log with id {log_id}: {str(e)}")
-            raise failure_log_exceptions.FailureLogDatabaseError("Failure log database error") from e
+            raise failure_log_exceptions.FailureLogDatabaseError() from e
 
     async def delete_failure_log(self, log_id: int) -> bool:
         # log = await self.get_failure_log_by_id(log_id)
@@ -79,9 +77,7 @@ class FailureLogService:
 
             if log is None:
                 logger.info(f"Failure log with id {log_id} not found for deletion")
-                raise failure_log_exceptions.FailureLogNotFound(
-                    f"Log with id={log_id} not found"
-                )
+                raise failure_log_exceptions.FailureLogNotFound()
 
             await self.db.delete(log)
             await self.db.commit()
@@ -90,10 +86,11 @@ class FailureLogService:
         except SQLAlchemyError as e:
             await self.db.rollback()
             logger.error(f"Error deleting failure log with id {log_id}: {e}")
-            raise failure_log_exceptions.FailureLogDatabaseError("Failure log database error") from e
+            raise failure_log_exceptions.FailureLogDatabaseError() from e
 
 
-    async def analise_exception(self, exc: Exception, failure_log: FailureLog):
+    @staticmethod
+    async def analise_exception(exc: Exception, failure_log: FailureLog):
         if isinstance(exc, DEVELOPER_EXCEPTIONS):
             failure_log.severity = SeverityLevel.CRITICAL.value
             failure_log.assigned_group = Groups.DEVELOPER.value
@@ -105,3 +102,7 @@ class FailureLogService:
             failure_log.assigned_group = Groups.ADMIN.value
 
         return failure_log
+
+    async def send_failure_log_alert(self, failure_log: FailureLog):
+        # Placeholder for notification logic (e.g., email, Slack)
+        logger.info(f"Notification sent for failure log ID {failure_log.id}")
