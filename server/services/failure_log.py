@@ -1,9 +1,12 @@
 from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
-
-from .models import FailureLog, SeverityLevel
+import exceptions.failure_log as failure_log_exceptions
+from models.failure_log import FailureLog, SeverityLevel, Groups
 from sqlalchemy import select
 import logging
+from exceptions.devops import DEVOPS_EXCEPTIONS
+from exceptions.developer import DEVELOPER_EXCEPTIONS
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +32,11 @@ class FailureLogService:
             await self.db.commit()
             await self.db.refresh(new_log)
             return new_log
+
         except SQLAlchemyError as e:
             await self.db.rollback()
             logger.error(f"Error creating failure log: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error creating failure log")
+            raise failure_log_exceptions.FailureLogDatabaseError("Error Creating failure log") from e
 
     async def get_failure_log_by_id(self, log_id: int) -> FailureLog | None:
         try:
@@ -41,12 +45,15 @@ class FailureLogService:
 
             if not log:
                 logger.info(f"Failure log with id {log_id} not found")
-                raise HTTPException(status_code=404, detail="Failure log not found")
+                raise failure_log_exceptions.FailureLogNotFound(
+                    f"Log with id={log_id} not found"
+                )
 
             return log
+
         except SQLAlchemyError as e:
             logger.error(f"Error retrieving failure log with id {log_id}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error retrieving failure log")
+            raise failure_log_exceptions.FailureLogDatabaseError(f"Error retrieving failure log with id {log_id}") from e
 
     async def update_failure_log(self, log_id: int, data: dict) -> FailureLog | None:
         try:
@@ -58,10 +65,11 @@ class FailureLogService:
             await self.db.commit()
             await self.db.refresh(log)
             return log
+
         except SQLAlchemyError as e:
             await self.db.rollback()
             logger.error(f"Error updating failure log with id {log_id}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error updating failure log")
+            raise failure_log_exceptions.FailureLogDatabaseError("Failure log database error") from e
 
     async def delete_failure_log(self, log_id: int) -> bool:
         # log = await self.get_failure_log_by_id(log_id)
@@ -69,10 +77,31 @@ class FailureLogService:
             log = await self.db.execute(select(FailureLog).where(FailureLog.id == log_id))
             log = log.scalars().first()
 
+            if log is None:
+                logger.info(f"Failure log with id {log_id} not found for deletion")
+                raise failure_log_exceptions.FailureLogNotFound(
+                    f"Log with id={log_id} not found"
+                )
+
             await self.db.delete(log)
             await self.db.commit()
             return True
+
         except SQLAlchemyError as e:
             await self.db.rollback()
             logger.error(f"Error deleting failure log with id {log_id}: {e}")
-            raise HTTPException(status_code=500, detail="Error deleting failure log")
+            raise failure_log_exceptions.FailureLogDatabaseError("Failure log database error") from e
+
+
+    async def analise_exception(self, exc: Exception, failure_log: FailureLog):
+        if isinstance(exc, DEVELOPER_EXCEPTIONS):
+            failure_log.severity = SeverityLevel.CRITICAL.value
+            failure_log.assigned_group = Groups.DEVELOPER.value
+        elif isinstance(exc, DEVOPS_EXCEPTIONS):
+            failure_log.severity = SeverityLevel.CRITICAL.value
+            failure_log.assigned_group = Groups.DEVOPS.value
+        else:
+            failure_log.severity = SeverityLevel.MINOR.value
+            failure_log.assigned_group = Groups.ADMIN.value
+
+        return failure_log

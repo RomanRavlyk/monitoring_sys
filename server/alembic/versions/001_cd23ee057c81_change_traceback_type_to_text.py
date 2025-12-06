@@ -1,8 +1,8 @@
-"""test
+"""change traceback type to text
 
-Revision ID: 08fc18f8a31f
+Revision ID: cd23ee057c81
 Revises: 
-Create Date: 2025-12-02 23:50:34.989240
+Create Date: 2025-12-05 23:56:40.042036
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '08fc18f8a31f'
+revision: str = 'cd23ee057c81'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,10 +31,10 @@ def upgrade() -> None:
     )
     op.create_table('failure_logs',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('assigned_group', sa.String(length=128), nullable=False),
-    sa.Column('severity', sa.Enum('CRITICAL', 'WARNING', 'INFO', name='severitylevel'), nullable=False),
+    sa.Column('assigned_group', sa.String(length=128), nullable=True),
+    sa.Column('severity', sa.Enum('CRITICAL', 'WARNING', 'INFO', name='severitylevel'), nullable=True),
     sa.Column('error_type', sa.String(length=256), nullable=False),
-    sa.Column('error_traceback', sa.String(length=2048), nullable=False),
+    sa.Column('error_traceback', sa.Text(), nullable=False),
     sa.Column('error_message', sa.String(length=1024), nullable=False),
     sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')

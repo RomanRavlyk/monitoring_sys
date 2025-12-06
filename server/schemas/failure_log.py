@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from datetime import datetime
 
@@ -8,13 +8,13 @@ class SeverityLevel(str, Enum):
     INFO = "Info"
 
 class FailureLogCreate(BaseModel):
-    assigned_group: str = Field(..., max_length=128)
-    severity: SeverityLevel
+    assigned_group: str | None = Field(None, max_length=128)
+    severity: SeverityLevel | None = Field(None, max_length=128)
     error_type: str = Field(..., max_length=256)
-    error_traceback: str = Field(..., max_length=2048)
+    error_traceback: str = Field(...)
     error_message: str = Field(..., max_length=1024)
 
-class FailureLogRead(BaseModel):
+class FailureLogResult(BaseModel):
     id: int
     assigned_group: str
     severity: str
@@ -23,8 +23,7 @@ class FailureLogRead(BaseModel):
     error_message: str
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class FailureLogUpdate(BaseModel):
     assigned_group: str | None = Field(None, max_length=128)

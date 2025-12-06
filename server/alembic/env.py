@@ -3,11 +3,10 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from db.base import Base
-from api_key.models import APIKey
-from failure_log.models import FailureLog
 from alembic import context
 from core.settings import settings
-
+from models.failure_log import FailureLog
+from models.api_key import APIKey
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

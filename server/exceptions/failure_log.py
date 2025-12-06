@@ -1,0 +1,22 @@
+
+
+class FailureLogException(Exception):
+    """Exception raised for failures in the service layer."""
+    status_code = 500
+    message = "Failure log Exception occurred."
+
+    def __init__(self, message: str | None = None):
+        if message:
+            self.message = message
+        super().__init__(message)
+
+class FailureLogNotFound(FailureLogException):
+    """Exception raised when a failure log is not found."""
+    status_code = 404
+    message = "Failure log not found."
+
+
+class FailureLogDatabaseError(FailureLogException):
+    """Exception raised for database-related errors."""
+    status_code = 500
+    message = "Database error occurred while processing failure log."

@@ -3,13 +3,13 @@ import hashlib
 import random
 import string
 import sys
-from api_key.schemas import APIKeySchema
-from api_key.models import APIKey
+from schemas.api_key import APIKeySchema
+from models.api_key import APIKey
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from db.db import async_session
+from db.database import async_session
 
 import logging
 
