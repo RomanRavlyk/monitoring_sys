@@ -13,6 +13,7 @@ from db.database import get_db
 import traceback
 from models.failure_log import FailureLog
 from middleware import APIKeyMiddleware
+from core.settings import settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,7 +42,7 @@ devops_exc_router = APIRouter(prefix="/devops", tags=["DevOps Exceptions"])
 random_exc_router = APIRouter(prefix="/random", tags=["Random Exceptions"])
 
 app.add_middleware(CORSMiddleware,
-                   allow_origins=["*"],
+                   allow_origins=settings.allowed_origins,
                    allow_credentials=True,
                    allow_methods=["*"],
                    allow_headers=["*"],

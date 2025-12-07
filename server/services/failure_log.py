@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from core.settings import settings
 from sqlalchemy.exc import SQLAlchemyError
 import exceptions.failure_log as failure_log_exceptions
 from models.failure_log import FailureLog, SeverityLevel, Groups
@@ -6,7 +6,8 @@ from sqlalchemy import select
 import logging
 from exceptions.devops import DEVOPS_EXCEPTIONS
 from exceptions.developer import DEVELOPER_EXCEPTIONS
-
+import httpx
+from schemas.failure_log import FailureLogResult
 
 logger = logging.getLogger(__name__)
 
@@ -106,3 +107,14 @@ class FailureLogService:
     async def send_failure_log_alert(self, failure_log: FailureLog):
         # Placeholder for notification logic (e.g., email, Slack)
         logger.info(f"Notification sent for failure log ID {failure_log.id}")
+
+        payload = FailureLogResult.model_validate(failure_log).model_dump()
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(settings.monitoring_system_url, json=payload, timeout=10)
+                response.raise_for_status()
+                logger.info(f"Successfully sent failure log ID {failure_log.id} to monitoring system.")
+            except httpx.HTTPError as e:
+                logger.error(f"Failed to send failure log ID {failure_log.id} to monitoring system: {str(e)}")
+                raise failure_log_exceptions.FailureLogRequestSendingError() from e
