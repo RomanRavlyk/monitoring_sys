@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from api.failure_log import router as failure_log_router
+from routers.failure_log import router as failure_log_router
 import logging
 from services.api_key import APIKeyService
 from exceptions.api_key import ApiKeyException
@@ -48,7 +48,7 @@ app.add_middleware(CORSMiddleware,
                    allow_headers=["*"],
                    )
 
-app.add_middleware(APIKeyMiddleware)
+# app.add_middleware(APIKeyMiddleware)
 
 
 @app.exception_handler(Exception)
@@ -73,6 +73,8 @@ async def general_exception_handler(request: Request, exc: Exception):
 
             logger.error(
                 f"Exception occurred, logged to failure_log table: {type(exc).__name__}: {str(exc)}")
+
+            await FailureLogService.send_failure_log_alert(failure_log)
 
             return JSONResponse(status_code = failure_log.error_status_code, content=failure_log.error_message)
 
@@ -243,4 +245,4 @@ app.include_router(random_exc_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app")
+    uvicorn.run(app, host="0.0.0.0", port=5000)

@@ -1,3 +1,5 @@
+import json
+
 from core.settings import settings
 from sqlalchemy.exc import SQLAlchemyError
 import exceptions.failure_log as failure_log_exceptions
@@ -104,15 +106,17 @@ class FailureLogService:
 
         return failure_log
 
-    async def send_failure_log_alert(self, failure_log: FailureLog):
+    @staticmethod
+    async def send_failure_log_alert(failure_log: FailureLog):
         # Placeholder for notification logic (e.g., email, Slack)
         logger.info(f"Notification sent for failure log ID {failure_log.id}")
 
-        payload = FailureLogResult.model_validate(failure_log).model_dump()
-
+        payload = FailureLogResult.model_validate(failure_log)
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.post(settings.monitoring_system_url, json=payload, timeout=10)
+                obj = payload.model_dump(mode="json")
+                print("SERIALISED ERROR TRACEBACK: ", obj['error_traceback'])
+                response = await client.post(f"{settings.monitoring_system_url}/failure_log", json=payload.model_dump(mode="json"), timeout=10)
                 response.raise_for_status()
                 logger.info(f"Successfully sent failure log ID {failure_log.id} to monitoring system.")
             except httpx.HTTPError as e:
