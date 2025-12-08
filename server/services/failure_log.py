@@ -110,14 +110,18 @@ class FailureLogService:
     async def send_failure_log_alert(failure_log: FailureLog):
         # Placeholder for notification logic (e.g., email, Slack)
         logger.info(f"Notification sent for failure log ID {failure_log.id}")
-
+        headers = {"X-CLIENT-ID": settings.client_id}
         payload = FailureLogResult.model_validate(failure_log)
         async with httpx.AsyncClient() as client:
             try:
                 obj = payload.model_dump(mode="json")
                 print("SERIALISED ERROR TRACEBACK: ", obj['error_traceback'])
-                response = await client.post(f"{settings.monitoring_system_url}/failure_log", json=payload.model_dump(mode="json"), timeout=10)
+                response = await client.post(f"{settings.monitoring_system_url}/alert",
+                                             json=payload.model_dump(mode="json"),
+                                             timeout=10, headers=headers
+                                             )
                 response.raise_for_status()
+                logger.info(f"Response from monitoring system: {response.text}")
                 logger.info(f"Successfully sent failure log ID {failure_log.id} to monitoring system.")
             except httpx.HTTPError as e:
                 logger.error(f"Failed to send failure log ID {failure_log.id} to monitoring system: {str(e)}")
