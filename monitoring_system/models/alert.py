@@ -2,6 +2,7 @@ from db.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, Text, String, Integer, DateTime, func
 from datetime import datetime
+from models.user import User
 
 class Alert(Base):
     __tablename__ = 'alerts'
@@ -24,6 +25,8 @@ class Alert(Base):
     error_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     alert_created: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
+    solved: Mapped[bool] = mapped_column(default=False, nullable=False)
+    solved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    assigned_to: Mapped[int | None] = mapped_column(ForeignKey('users.id'), nullable=True)
 
 

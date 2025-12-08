@@ -137,3 +137,58 @@ class UserService:
         except SQLAlchemyError as e:
             logger.exception("Unexpected error during deleting current user")
             raise
+
+    async def get_user_by_id(self, user_id: int):
+        try:
+            result = await self.db.execute(select(User).where(User.id == user_id))
+            user = result.scalars().first()
+            return user
+        except SQLAlchemyError as e:
+            logger.exception(f"Error retrieving user by id {user_id}: {str(e)}")
+            raise
+
+    async def get_users(self):
+        try:
+            result = await self.db.execute(select(User))
+            users = result.scalars().all()
+            return users
+        except SQLAlchemyError as e:
+            logger.exception(f"Error retrieving all users: {str(e)}")
+            raise
+
+    async def update_user(self ,user_id, data):
+        try:
+            result = await self.db.execute(select(User).where(User.id == user_id))
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            for key, value in data.items():
+                if key == "password":
+                    setattr(user, "hashed_password", hash_password(value))
+                elif key != "id":
+                    setattr(user, key, value)
+
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+            return user
+        except SQLAlchemyError as e:
+            await self.db.rollback()
+            logger.exception(f"Error updating user id {user_id}: {str(e)}")
+            raise
+
+    async def delete_user(self, user_id):
+        try:
+            result = await self.db.execute(select(User).where(User.id == user_id))
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            await self.db.delete(user)
+            await self.db.commit()
+
+            return True
+        except SQLAlchemyError as e:
+            logger.exception(f"Error deleting user id {user_id}: {str(e)}")
+            raise

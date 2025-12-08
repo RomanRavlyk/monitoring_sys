@@ -11,9 +11,9 @@ class SeverityLevel(str, enum.Enum):
     MINOR = "Minor"
 
 class Groups(str, enum.Enum):
-    DEVOPS = "DevOps"
-    ADMIN = "Admin"
-    DEVELOPER = "Developer"
+    DEVOPS = "DEVOPS"
+    ADMIN = "ADMIN"
+    DEVELOPER = "DEVELOPER"
 
 class FailureLog(Base):
     __tablename__ = "failure_logs"

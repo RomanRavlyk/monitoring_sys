@@ -116,7 +116,7 @@ class FailureLogService:
             try:
                 obj = payload.model_dump(mode="json")
                 print("SERIALISED ERROR TRACEBACK: ", obj['error_traceback'])
-                response = await client.post(f"{settings.monitoring_system_url}/alert",
+                response = await client.post(f"{settings.monitoring_system_url}/alerts",
                                              json=payload.model_dump(mode="json"),
                                              timeout=10, headers=headers
                                              )

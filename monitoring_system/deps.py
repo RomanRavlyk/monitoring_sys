@@ -36,7 +36,16 @@ async def has_admin_permission(token = Depends(verify_jwt)):
         return True
     raise HTTPException(status_code=403, detail="Forbidden")
 
-async def has_object_permission(object_owner_id: int, token = Depends(verify_jwt)):
-    if token["role"] == UserRoles.ADMIN.value or token["user_id"] == object_owner_id:
-        return True
+async def is_authenticated(token = Depends(verify_jwt)):
+    """Basic authentication check - just verify user is logged in"""
+    return token
+
+async def has_alert_object_permission(
+    alert_id: int,
+    token=Depends(verify_jwt),
+    alert_service: AlertService = Depends(get_alert_service)
+):
+    alert = await alert_service.get_alert_by_id(alert_id)
+    if token["role"] == UserRoles.ADMIN.value or alert.assigned_to == int(token["sub"]):
+        return token
     raise HTTPException(status_code=403, detail="Forbidden")

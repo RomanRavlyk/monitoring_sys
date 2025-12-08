@@ -1,16 +1,38 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
 class AlertSchema(BaseModel):
-    id_on_server: int
-    server_id: int
-    assigned_group: str
-    severity: str
-    error_status_code: int
-    error_type: str
-    error_traceback: str
-    error_message: str
-    error_timestamp: datetime
+    id_on_server: Optional[int] = None
+    server_id: Optional[int] = None
+    assigned_group: Optional[str] = None
+    severity: Optional[str] = None
+    error_status_code: Optional[int] = None
+    error_type: Optional[str] = None
+    error_traceback: Optional[str] = None
+    error_message: Optional[str] = None
+    error_timestamp: Optional[datetime] = None
+    solved: Optional[bool] = None
+    assigned_to: Optional[int] = None
+    solved_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AlertSchemaResponse(BaseModel):
+    id: int
+    id_on_server: Optional[int] = None
+    server_id: Optional[int] = None
+    assigned_group: Optional[str] = None
+    severity: Optional[str] = None
+    error_status_code: Optional[int] = None
+    error_type: Optional[str] = None
+    error_traceback: Optional[str] = None
+    error_message: Optional[str] = None
+    error_timestamp: Optional[datetime] = None
+    solved: Optional[bool] = None
+    assigned_to: Optional[int] = None
+    solved_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
