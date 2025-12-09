@@ -3,6 +3,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Enum, DateTime, func, UniqueConstraint
 import enum
 from datetime import datetime
+
+from models.healthcheck import HealthCheck
 from .alert import Alert
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -18,6 +20,11 @@ class Server(Base):
     name: Mapped[str] = mapped_column(String(256))
     host: Mapped[str] = mapped_column(String(256))
     port: Mapped[int] = mapped_column(Integer)
+
+    health_checks: Mapped[list["HealthCheck"]] = relationship(HealthCheck,
+                                                        back_populates="server",
+                                                        lazy="selectin"
+                                                        )
 
     client_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True),

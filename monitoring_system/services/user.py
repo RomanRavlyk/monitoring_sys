@@ -67,7 +67,7 @@ class UserService:
             self.db.add(new_user)
             await self.db.commit()
             await self.db.refresh(new_user)
-            return True
+            return new_user
         except SQLAlchemyError as e:
             await self.db.rollback()
             logging.exception(f"Error registering user: {str(e)}")

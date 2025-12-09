@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import List
+
 from core.settings import settings
 import httpx
 from fastapi import HTTPException
@@ -8,7 +10,7 @@ from models.alert import Alert
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 from sqlalchemy import select
-from utils import send_email
+import random
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,16 @@ class AlertService:
             logger.error(f"Error creating alert: {str(e)}")
             raise
 
-    async def get_alerts_by_server(self, server_id) -> list[Alert]:
+    async def get_alerts_by_user(self, user_id) -> List[Alert]:
+        try:
+            result = await self.db.execute(select(Alert).where(Alert.assigned_to == user_id))
+            alerts = result.scalars().all()
+            return alerts
+        except SQLAlchemyError as e:
+            logger.error(f"Error retrieving alerts for user {user_id}: {str(e)}")
+            raise
+
+    async def get_alerts_by_server(self, server_id) -> List[Alert]:
         try:
             result = await self.db.execute(select(Alert).where(Alert.server_id == server_id))
             alerts = result.scalars().all()
@@ -54,9 +65,9 @@ class AlertService:
             logger.error(f"Error retrieving alert with id {alert_id}: {str(e)}")
             raise
 
-    async def get_alerts(self):
+    async def get_alerts(self, user_id: int):
         try:
-            result = await self.db.execute(select(Alert))
+            result = await self.db.execute(select(Alert).where(Alert.assigned_to == user_id))
             return result.scalars().all()
         except SQLAlchemyError as e:
             logger.error(f"Error retrieving alerts: {str(e)}")
@@ -116,26 +127,13 @@ class AlertService:
             raise
 
     async def assign_healthcheck_user(self) -> User:
-        stmt = (
-            select(User)
-            .where(User.role == UserRoles.DEVOPS)
-            .order_by(User.assigned_tasks_number.asc())
-            .with_for_update()
-            .limit(1)
-        )
+        result  = await self.db.execute(select(User).where(User.role == UserRoles.DEVOPS.value))
+        devops_users = result.scalars().all()
 
-        result = await self.db.execute(stmt)
-        user = result.scalars().first()
+        if not devops_users:
+            raise Exception("No DevOps users available")
 
-        if not user:
-            raise HTTPException(status_code=404, detail="No DevOps user available")
-
-        user.assigned_tasks_number += 1
-        self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
-
-        return user
+        return random.choice(devops_users)
 
     async def assign_alert(self, alert_id: int, role: str):
         try:
@@ -180,7 +178,7 @@ class AlertService:
 
         body = (
             f"🚨 *Healthcheck Alert*\n"
-            f"Hello, <@{user.slack_id}>!\n\n"
+            f"Hello, {user.email}!\n\n"
             f"*Server:* `{server_name}`\n"
             f"*Status:* `{status}`\n"
             f"*Timestamp:* `{timestamp}`\n\n"
@@ -214,24 +212,3 @@ class AlertService:
             response.raise_for_status()
             logger.info(f"Message sent to user {user.username} (ID: {user.id}) for alert {alert.id}")
             return response.text
-
-    # @staticmethod
-    # async def send_healthcheck_alert(message: str, user: User):
-    #     if not user:
-    #         raise HTTPException(status_code=404, detail="User not found")
-    #
-    #     body = (
-    #         f"🚨 *Healthcheck Alert*\n"
-    #         f"Hello, {user.username}!\n\n"
-    #         f"There was an issue during the server healthcheck.\n\n"
-    #         f"*Details:*\n{message}\n\n"
-    #         f"Please check the monitoring system for more information."
-    #     )
-    #
-    #     payload = {"text": body}
-    #
-    #     async with httpx.AsyncClient() as client:
-    #         response = await client.post(settings.slack_webhook_url, json=payload)
-    #         response.raise_for_status()
-    #         logger.info(f"Healthcheck alert sent to user {user.username} (ID: {user.id})")
-    #         return response.text

@@ -18,7 +18,7 @@ class UserCreateAdmin(BaseModel):
     email: str| None = Field(None, max_length=254)
     slack_id: str | None = Field(None, max_length=50)
     password: str| None = Field(None, min_length=8)
-    is_active: bool = Field(default=True)
+    is_active: bool | None = Field(default=True)
     role: str| None = Field(None)
 
 class UserLogin(BaseModel):
@@ -32,6 +32,7 @@ class UserResult(BaseModel):
     slack_id: str
     is_active: bool
     role: UserRoles
+    assigned_tasks_number: int
 
     model_config = ConfigDict(from_attributes=True)
 

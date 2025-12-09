@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from schemas.user import UserResult, Token, UserCreate, UserLogin, UserUpdate, UserCreateAdmin, UserUpdateAdmin
 from deps import verify_jwt, get_user_service, has_admin_permission
 from services.user import UserService
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,4 +77,5 @@ async def delete_user(user_id: int,
                       service: UserService = Depends(get_user_service),
                       is_admin: bool = Depends(has_admin_permission)
                       ):
-    return await service.delete_user(user_id)
+    await service.delete_user(user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

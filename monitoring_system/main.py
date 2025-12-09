@@ -3,19 +3,19 @@ from deps import get_server_service, get_alert_service, get_user_service
 from schemas.alert import AlertSchema
 from services.server import ServerService
 from services.alert import AlertService
-from fastapi import FastAPI, Depends, HTTPException, Body
-from db.database import get_db
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-import httpx
-from models.server import  ServerStatus
 import logging
 from schemas.failure_log import FailureLog
 from routers.server import router as server_router
 from routers.alert import router as alert_router
 from routers.user import user_router, admin_router, authentication_router
+from routers.healthcheck import router as healthcheck_router
+from routers.report import router as report_router
 from fastapi import Request
-from datetime import datetime, UTC
+from services.healthcheck import HealthCheckService
+from middleware import IsAuthenticatedMiddleware
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,8 @@ async def periodic_healthcheck():
 
                 server_service = ServerService(db)
                 alert_service = AlertService(db)
+                health_check_service = HealthCheckService(db)
+
 
                 servers = await server_service.get_servers()
                 logger.info("Performing periodic health check...")
@@ -46,39 +48,12 @@ async def periodic_healthcheck():
                 for server in servers:
                     logger.info(f"Health check for server {server.id} - {server.name}")
 
-                    async with httpx.AsyncClient() as client:
-                        try:
-                            response = await client.get(
-                                f"http://{server.host}:{server.port}/health",
-                                timeout=5
-                            )
-                        except Exception as e:
-                            response = None
-                            logger.warning(f"Server {server.id} connection error: {str(e)}")
-
-                        if response and response.status_code == 200:
-                            server.status = ServerStatus.ONLINE.value
-                            logger.info(f"Server {server.id} healthy")
-                        else:
-                            server.status = ServerStatus.OFFLINE.value
-                            logger.warning(f"Server {server.id} unhealthy")
-
-                            assigned_user = await alert_service.assign_healthcheck_user()
-
-                            await alert_service.send_healthcheck_alert(
-                                user=assigned_user,
-                                server_name=server.name,
-                                status=server.status,
-                                message=response.text if response else "No response",
-                                timestamp=datetime.now(UTC)
-                            )
-
-                await db.commit()
+                    await health_check_service.perform_healthcheck(server, alert_service)
 
         except Exception as e:
             logger.error(f"Periodic healthcheck failed: {str(e)}")
 
-        await asyncio.sleep(300)  # run again in 5 minutes
+        await asyncio.sleep(300)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -95,7 +70,7 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(lifespan=lifespan)
-
+app.add_middleware(IsAuthenticatedMiddleware)
 
 @app.get("/")
 async def read_root():
@@ -120,6 +95,8 @@ async def create_alert(request: Request, failure_log: FailureLog,
 
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
+
+    failure_log_obj = failure_log.model_dump()
 
     alert = AlertSchema(
         id_on_server=failure_log.id,
@@ -147,7 +124,9 @@ async def create_alert(request: Request, failure_log: FailureLog,
         content={"message": "Alert created successfully", "alert_id": alert.id}
     )
 app.include_router(server_router)
+app.include_router(healthcheck_router)
 app.include_router(alert_router)
+app.include_router(report_router)
 app.include_router(authentication_router)
 app.include_router(user_router)
 app.include_router(admin_router)

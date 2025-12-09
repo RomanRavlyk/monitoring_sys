@@ -14,14 +14,14 @@ class ServerCreate(BaseModel):
     name: str = Field(..., max_length=256)
     host: str = Field(..., max_length=256)
     port: int = Field(...)
-    desc: str | None = Field(str | None, max_length=512)
+    desc: str | None = Field(None, max_length=512)
     status: str | None = Field(StatusEnum | None , max_length=20)
 
 class ServerRegister(BaseModel):
     name: str = Field(..., max_length=256)
     host: str = Field(..., max_length=256)
     port: int = Field(...)
-    desc: str | None = Field(str | None, max_length=512)
+    desc: str | None = Field(None, max_length=512)
 
 class ServerResult(BaseModel):
     id: int
@@ -29,7 +29,7 @@ class ServerResult(BaseModel):
     host: str
     port: int
     desc: str | None
-    alerts: list[AlertSchema]
+    # alerts: list[AlertSchema]
     status: str
     added_at: datetime
     client_id: UUID

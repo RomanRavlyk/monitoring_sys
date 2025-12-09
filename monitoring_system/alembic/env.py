@@ -7,7 +7,10 @@ from alembic import context
 from models.user import User
 from models.server import Server
 from models.alert import Alert
+from models.healthcheck import HealthCheck
 from db.base import Base
+
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
