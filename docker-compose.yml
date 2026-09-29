@@ -6,26 +6,29 @@ services:
       dockerfile: Dockerfile
     container_name: monitoring_system
     env_file:
-      - ./monitoring_system/.env
+      - .env
     ports:
       - "8000:8000"
     networks:
       - app_network
+    volumes:
+      - ./alembic:/app/alembic
     depends_on:
-      monitoring_db:
-        condition: service_healthy
-    restart: unless-stopped
+      - monitoring_db
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${MONITORING_POSTGRES_USER:-postgres}:${MONITORING_POSTGRES_PASSWORD:-postgres}@monitoring_db:5432/${MONITORING_POSTGRES_DB:-monitoring_db}
+       DATABASE_URL: postgresql+asyncpg://${MONITORING_DB_USER}:${MONITORING_DB_PASSWORD}@monitoring_db:${MONITORING_DB_PORT}/${MONITORING_DB_DATABASE}
+    restart: unless-stopped
 
   # Monitoring System Database
   monitoring_db:
     image: postgres:16-alpine
     container_name: monitoring_db
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ${MONITORING_POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${MONITORING_POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${MONITORING_POSTGRES_DB:-monitoring_db}
+      POSTGRES_USER: ${MONITORING_DB_USER}
+      POSTGRES_PASSWORD: ${MONITORING_DB_PASSWORD}
+      POSTGRES_DB: ${MONITORING_DB_DATABASE}
     ports:
       - "5433:5432"
     volumes:
@@ -43,24 +46,27 @@ services:
       - ./server/.env
     ports:
       - "5000:5000"
+    volumes:
+      - ./alembic:/app/alembic
     networks:
       - app_network
     depends_on:
-      server_db:
-        condition: service_healthy
+      - server_db
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${SERVER_POSTGRES_USER:-postgres}:${SERVER_POSTGRES_PASSWORD:-postgres}@server_db:5432/${SERVER_POSTGRES_DB:-server_db}
-      - MONITORING_SYSTEM_URL=http://monitoring_system:8000
+      DATABASE_URL: postgresql+asyncpg://${SERVER_DB_USER}:${SERVER_DB_PASSWORD}@server_db:${SERVER_DB_PORT}/${SERVER_DB_DATABASE}
+      MONITORING_SYSTEM_URL: http://monitoring_system:8000
 
   # Server Database
   server_db:
     image: postgres:16-alpine
     container_name: server_db
+    env_file:
+        - .env
     environment:
-      POSTGRES_USER: ${SERVER_POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${SERVER_POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${SERVER_POSTGRES_DB:-server_db}
+      POSTGRES_USER: ${SERVER_DB_USER}
+      POSTGRES_PASSWORD: ${SERVER_DB_PASSWORD}
+      POSTGRES_DB: ${SERVER_DB_DATABASE}
     ports:
       - "5434:5432"
     volumes:
@@ -76,4 +82,3 @@ networks:
 volumes:
   monitoring_pgdata:
   server_pgdata:
-

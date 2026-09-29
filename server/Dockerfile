@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 5000
 
 # Run migrations and start application
-CMD alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 5000
+CMD ["bash", "-c", "uvicorn main:app --host 0.0.0.0 --port 5000"]

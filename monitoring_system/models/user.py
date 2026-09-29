@@ -18,6 +18,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     assigned_tasks_number: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_man: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     role: Mapped[UserRoles] = mapped_column(
         Enum(UserRoles),

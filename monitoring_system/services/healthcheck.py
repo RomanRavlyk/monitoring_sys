@@ -9,6 +9,7 @@ from models.server import ServerStatus
 from services.alert import AlertService
 from schemas.healthcheck import HealthCheckCreate
 from sqlalchemy import select
+from core.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,11 @@ class HealthCheckService:
 
     async def perform_healthcheck(self, server: Server, alert_service: AlertService):
         async with httpx.AsyncClient() as client:
+            headers = {'X-Api-Key': settings.api_key}
             try:
                 response = await client.get(
                     f"http://{server.host}:{server.port}/health",
+                    headers=headers,
                     timeout=5
                 )
             except Exception as e:
